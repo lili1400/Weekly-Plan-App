@@ -31,11 +31,15 @@ if os.path.exists(FONT_PATH) and os.path.getsize(FONT_PATH) > 1000:
     except:
         has_font = False
 
-# دالة ذكية لتنسيق النصوص وتوصيل الحروف العربية وتصحيح اتجاهها
+# دالة مطورة ومحدثة تمنع ظهور المربعات السوداء في الحقول الفارغة تماماً
 def smart_format(text):
-    if not text:
+    if text is None:
         return ""
-    text_str = str(text)
+    text_str = str(text).strip()
+    if text_str == "" or text_str.isspace():
+        return ""
+    
+    # فحص برمي لوجود أي حرف عربي لتنسيقه، وإلا يمرر كإنجليزي طبيعي
     has_arabic = any(u'\u0600' <= char <= u'\u06FF' for char in text_str)
     if has_arabic:
         reshaped = arabic_reshaper.reshape(text_str)
@@ -91,7 +95,6 @@ for index, (day, periods) in enumerate(days_data.items()):
         st.subheader(f"📅 Schedule for {day}")
         day_inputs = []
         for period, subject in periods:
-            # هنا تم التعديل بوضع رقم 4 لتحديد تقسيم الأعمدة بشكل سليم ومنع الخطأ
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.write(f"Period {period}")
@@ -134,7 +137,7 @@ if st.button("🚀 Export Weekly Plan to PDF"):
         [smart_format(f"School: {school_name}"), smart_format(f"Weekly Lesson Plan - {week_num}")],
         [smart_format(f"Grade: {grade}"), smart_format(f"Date: {date_range}")]
     ]
-    header_table = Table(header_info, colWidths=[270, 270])
+    header_table = Table(header_info, colWidths=[270, 275])
     header_table.setStyle(title_style)
     story.append(header_table)
     story.append(Spacer(1, 15))
@@ -152,7 +155,7 @@ if st.button("🚀 Export Weekly Plan to PDF"):
             ])
             
         # شريط اسم اليوم العلوي (موسط)
-        day_title = Table([[smart_format(f"📅 {day}")]], colWidths=[540])
+        day_title = Table([[smart_format(f"📅 {day}")]], colWidths=[545])
         day_title.setStyle(TableStyle([
             ('FONTNAME', (0,0), (-1,-1), font_name),
             ('FONTSIZE', (0,0), (-1,-1), 11),
@@ -164,7 +167,7 @@ if st.button("🚀 Export Weekly Plan to PDF"):
         story.append(day_title)
         
         # تنسيق الجدول وتوسيط المدخلات والبيانات أفقياً وعمودياً
-        t = Table(table_data, colWidths=[50, 110, 190, 190])
+        t = Table(table_data, colWidths=[50, 115, 190, 190])
         t.setStyle(TableStyle([
             ('FONTNAME', (0,0), (-1,-1), font_name),
             ('FONTSIZE', (0,0), (-1,-1), 10),
@@ -185,7 +188,7 @@ if st.button("🚀 Export Weekly Plan to PDF"):
         [smart_format(footer_note), ""],
         [smart_format(f"Teacher: {signature_1}"), smart_format(f"Coordinator: {signature_2}")]
     ]
-    footer_table = Table(footer_data, colWidths=[270, 270])
+    footer_table = Table(footer_data, colWidths=[270, 275])
     footer_table.setStyle(TableStyle([
         ('FONTNAME', (0,0), (-1,-1), font_name),
         ('FONTSIZE', (0,0), (-1,-1), 10),
@@ -201,7 +204,7 @@ if st.button("🚀 Export Weekly Plan to PDF"):
     with open(pdf_filename, "rb") as pdf_file:
         PDFbyte = pdf_file.read()
     
-    st.success("🎉 PDF Generated with Centered Text Successfully!")
+    st.success("🎉 PDF Generated Successfully with Clean Empty Cells!")
     st.download_button(label="📥 Click Here to Download PDF File",
                        data=PDFbyte,
                        file_name=f"Weekly_Plan_{grade}.pdf",
