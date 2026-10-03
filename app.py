@@ -10,115 +10,100 @@ from bidi.algorithm import get_display
 import requests
 import os
 
-# إعداد خط عربي رسمي ومستقر يدعم PDF (تم تحديث الرابط ليكون مضموناً ومباشراً)
+# إعداد خط ذكي عالمي يدعم الإنجليزية والعربية في الـ PDF
 FONT_URL = "https://cloudflare.com"
 FONT_PATH = "Amiri-Regular.ttf"
 
-# محاولة تحميل الخط العربي بأمان دون التسبب في تعطيل البرنامج
 if not os.path.exists(FONT_PATH):
     try:
         response = requests.get(FONT_URL, timeout=15)
         if response.status_code == 200:
             with open(FONT_PATH, 'wb') as f:
                 f.write(response.content)
-    except Exception as e:
+    except:
         pass
 
-# تسجيل الخط في مكتبة الـ PDF إذا تم تحميله بنجاح، وإلا استخدام الخط الافتراضي كحماية
-has_arabic_font = False
+has_font = False
 if os.path.exists(FONT_PATH) and os.path.getsize(FONT_PATH) > 1000:
     try:
-        pdfmetrics.registerFont(TTFont('ArabicFont', FONT_PATH))
-        has_arabic_font = True
+        pdfmetrics.registerFont(TTFont('GlobalFont', FONT_PATH))
+        has_font = True
     except:
-        has_arabic_font = False
+        has_font = False
 
-def format_arabic(text):
+# دالة ذكية لتنسيق النصوص وتوصيل الحروف العربية وتصحيح اتجاهها
+def smart_format(text):
     if not text:
         return ""
-    # إعادة تشكيل الحروف العربية وتصحيح اتجاهها من اليمين إلى اليسار
-    reshaped_text = arabic_reshaper.reshape(str(text))
-    bidi_text = get_display(reshaped_text)
-    return bidi_text
+    text_str = str(text)
+    has_arabic = any(u'\u0600' <= char <= u'\u06FF' for char in text_str)
+    if has_arabic:
+        reshaped = arabic_reshaper.reshape(text_str)
+        return get_display(reshaped)
+    return text_str
 
-# إعداد واجهة Streamlit لتدعم اتجاه اللغة العربية
-st.set_page_config(page_title="برنامج الخطة الأسبوعية", layout="wide")
+# إعداد واجهة برنامج المعلمات
+st.set_page_config(page_title="Weekly Lesson Plan App", layout="wide")
+st.title("📝 International School - Weekly Lesson Plan Generator")
 
-st.markdown("""
-    <style>
-    .reportview-container { direction: rtl; text-align: right; }
-    .sidebar .sidebar-content { direction: rtl; text-align: right; }
-    div.stButton > button:first-child {
-        background-color: #2B6CB0;
-        color: white;
-        font-size: 18px;
-        font-weight: bold;
-        padding: 10px 24px;
-        border-radius: 8px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# شريط جانبي لتعبئة البيانات الأساسية للجدول
+st.sidebar.header("📋 Header Information")
+school_name = st.sidebar.text_input("School Name", "International School")
+week_num = st.sidebar.text_input("Week", "Week 7")
+grade = st.sidebar.text_input("Grade / Section", "1A")
+date_range = st.sidebar.text_input("Date", "Oct 4 - Oct 8")
 
-st.title("📝 برنامج إعداد الخطة الأسبوعية المدرسية")
+st.sidebar.header("👇 Footer Information")
+footer_note = st.sidebar.text_area("Administration Note", "Note: Please follow up on the platform and homework daily.")
+signature_1 = st.sidebar.text_input("Teacher's Signature", "Class Teacher")
+signature_2 = st.sidebar.text_input("Coordinator's Signature", "School Principal")
 
-# شريط جانبي للبيانات الأساسية للجدول
-st.sidebar.header("📋 البيانات الأساسية (الترويسة)")
-school_name = st.sidebar.text_input("اسم المدرسة", "المدرسة العالمية")
-week_num = st.sidebar.text_input("الأسبوع", "الأسبوع السابع")
-grade = st.sidebar.text_input("الصف", "1A")
-date_range = st.sidebar.text_input("التاريخ", "4 أكتوبر - 8 أكتوبر")
-
-st.sidebar.header("👇 الترويسة السفلية")
-footer_note = st.sidebar.text_area("ملاحظة الإدارة لأولياء الأمور", "ملاحظة: الرجاء متابعة المنصة والواجبات يومياً مع الطلاب.")
-signature_1 = st.sidebar.text_input("توقيع المعلمة", "معلمة المادة")
-signature_2 = st.sidebar.text_input("اعتماد الإدارة", "قائدة المدرسة")
-
-# هيكل البيانات الثابتة للأيام والمواد المقسمة حصصاً كما في ملفكِ الأصلي
+# هيكل جدول الحصص والمواد الأصلي المعتمد في مدرستكم
 days_data = {
-    "الأحد": [
+    "Sunday": [
         (1, "Science"), (2, "Math"), (3, "Islamic"), (4, "English"),
         (5, "English"), (6, "Arabic"), (7, "Arabic"), (8, "Native Speaker")
     ],
-    "الإثنين": [
+    "Monday": [
         (1, "Science"), (2, "Math"), (3, "English"), (4, "English"),
         (5, "Arabic"), (6, "PE"), (7, "Islamic"), (8, "ICT")
     ],
-    "الثلاثاء": [
+    "Tuesday": [
         (1, "Math"), (2, "Little Readers Club"), (3, "Science"), (4, "Arabic"),
         (5, "English"), (6, "Islamic"), (7, "Native Speaker")
     ],
-    "الأربعاء": [
+    "Wednesday": [
         (1, "French"), (2, "Islamic"), (3, "ICT"), (4, "Math"),
         (5, "English"), (6, "Arabic"), (7, "PE")
     ],
-    "الخميس": [
+    "Thursday": [
         (1, "Math"), (2, "English"), (3, "English"), (4, "Arabic"),
         (5, "Science"), (6, "Islamic"), (7, "Art")
     ]
 }
 
-# إنشاء التابات لكل يوم لتسهيل التعبئة على المعلمة
+# بناء تابات الأيام المريحة للمعلمة للتعبئة
 tabs = st.tabs(list(days_data.keys()))
 all_inputs = {}
 
 for index, (day, periods) in enumerate(days_data.items()):
     with tabs[index]:
-        st.subheader(f"📅 خطة يوم {day}")
+        st.subheader(f"📅 Schedule for {day}")
         day_inputs = []
         for period, subject in periods:
-            col1, col2, col3, col4 = st.columns([1, 2, 4, 4])
+            col1, col2, col3, col4 = st.columns()
             with col1:
-                st.write(f"الحصة {period}")
+                st.write(f"Period {period}")
             with col2:
                 st.write(f"**{subject}**")
             with col3:
-                cw = st.text_input(f"العمل الصفي", key=f"{day}_{period}_cw", placeholder="اكتبي Classwork هنا...")
+                cw = st.text_input(f"Classwork - P{period}", key=f"{day}_{period}_cw", placeholder="Enter classwork (Arabic or English)...")
             with col4:
-                hw = st.text_input(f"الواجب المنزلي", key=f"{day}_{period}_hw", placeholder="اكتبي Homework هنا...")
+                hw = st.text_input(f"Homework - P{period}", key=f"{day}_{period}_hw", placeholder="Enter homework (Arabic or English)...")
             
             day_inputs.append({
-                "الحصة": period,
-                "المادة": subject,
+                "Period": period,
+                "Subject": subject,
                 "Classwork": cw,
                 "Homework": hw
             })
@@ -126,60 +111,59 @@ for index, (day, periods) in enumerate(days_data.items()):
 
 st.write("---")
 
-# زر التصدير وتحميل ملف الـ PDF المنسق تلقائياً
-if st.button("🚀 تصدير الخطة الأسبوعية كملف PDF منسق"):
+# إجراء توليد وتصدير ملف الـ PDF الموسط بالكامل
+if st.button("🚀 Export Weekly Plan to PDF"):
     pdf_filename = "weekly_plan.pdf"
-    doc = SimpleDocTemplate(pdf_filename, pagesize=A4, rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
+    doc = SimpleDocTemplate(pdf_filename, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
     story = []
     
-    font_name = 'ArabicFont' if has_arabic_font else 'Helvetica'
+    font_name = 'GlobalFont' if has_font else 'Helvetica'
     
-    # تنسيق الخطوط للترويسة
+    # 1. ترويسة الصفحة العليا (موسطة بالكامل CENTER)
     title_style = TableStyle([
         ('FONTNAME', (0,0), (-1,-1), font_name),
-        ('FONTSIZE', (0,0), (-1,-1), 13),
+        ('FONTSIZE', (0,0), (-1,-1), 11),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#1A365D")),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
     ])
     
-    # 1. تجميع ترويسة الصفحة العليا باللغة العربية المستقرة
     header_info = [
-        [format_arabic(f"المدرسة: {school_name}"), format_arabic(f"الخطة الأسبوعية - {week_num}")],
-        [format_arabic(f"الصف: {grade}"), format_arabic(f"التاريخ: {date_range}")]
+        [smart_format(f"School: {school_name}"), smart_format(f"Weekly Lesson Plan - {week_num}")],
+        [smart_format(f"Grade: {grade}"), smart_format(f"Date: {date_range}")]
     ]
-    header_table = Table(header_info, colWidths=[270, 270])
+    header_table = Table(header_info, colWidths=[275, 275])
     header_table.setStyle(title_style)
     story.append(header_table)
     story.append(Spacer(1, 15))
     
-    # 2. بناء جداول الأيام وتفاصيل الحصص
+    # 2. جداول الحصص الأسبوعية (موسطة بالكامل CENTER)
     for day, rows in all_inputs.items():
-        table_data = [[format_arabic("الواجب (Homework)"), format_arabic("العمل الصفي (Classwork)"), format_arabic("المادة"), format_arabic("الحصة")]]
+        table_data = [["Period", "Subject", "Classwork", "Homework"]]
         
         for row in rows:
             table_data.append([
-                format_arabic(row['Homework']),
-                format_arabic(row['Classwork']),
-                format_arabic(row['المادة']),
-                format_arabic(row['الحصة'])
+                smart_format(row['Period']),
+                smart_format(row['Subject']),
+                smart_format(row['Classwork']),
+                smart_format(row['Homework'])
             ])
             
-        # شريط اليوم الملون فوق كل جدول
-        day_title = Table([[format_arabic(f"📅 يوم {day}")]], colWidths=[540])
+        # شريط اسم اليوم العلوي (موسط)
+        day_title = Table([[smart_format(f"📅 {day}")]], colWidths=[550])
         day_title.setStyle(TableStyle([
             ('FONTNAME', (0,0), (-1,-1), font_name),
             ('FONTSIZE', (0,0), (-1,-1), 11),
             ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#2B6CB0")),
             ('TEXTCOLOR', (0,0), (-1,-1), colors.white),
-            ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
             ('PADDING', (0,0), (-1,-1), 5),
         ]))
         story.append(day_title)
         
-        # تنسيق خلايا ومظهر جدول الحصص والبيانات المعبأة
-        t = Table(table_data, colWidths=[180, 180, 120, 60])
+        # تنسيق الجدول وتوسيط المدخلات والبيانات أفقياً وعمودياً
+        t = Table(table_data, colWidths=[50, 110, 195, 195])
         t.setStyle(TableStyle([
             ('FONTNAME', (0,0), (-1,-1), font_name),
             ('FONTSIZE', (0,0), (-1,-1), 10),
@@ -188,36 +172,36 @@ if st.button("🚀 تصدير الخطة الأسبوعية كملف PDF منس�
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#EDF2F7")),
             ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor("#2D3748")),
             ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
-            ('TOPPADDING', (0,0), (-1,-1), 5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
         ]))
         story.append(t)
         story.append(Spacer(1, 12))
         
-    # 3. بناء الترويسة السفلية (الملاحظات وأماكن توقيع الإدارة والمعلمة)
+    # 3. ترويسة الصفحة السفلية والتواقيع (موسطة بالكامل CENTER)
     story.append(Spacer(1, 10))
     footer_data = [
-        [format_arabic(footer_note), ""],
-        [format_arabic(f"اعتماد الإدارة: {signature_2}"), format_arabic(f"توقيع المعلمة: {signature_1}")]
+        [smart_format(footer_note), ""],
+        [smart_format(f"Teacher: {signature_1}"), smart_format(f"Coordinator: {signature_2}")]
     ]
-    footer_table = Table(footer_data, colWidths=[270, 270])
+    footer_table = Table(footer_data, colWidths=[275, 275])
     footer_table.setStyle(TableStyle([
         ('FONTNAME', (0,0), (-1,-1), font_name),
         ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('TOPPADDING', (0,0), (-1,-1), 8),
     ]))
     story.append(footer_table)
     
-    # بناء وتصدير مستند الـ PDF بالبيانات الجديدة
+    # بناء المستند
     doc.build(story)
     
-    # توفير الملف للتحميل المباشر للمعلمة
     with open(pdf_filename, "rb") as pdf_file:
         PDFbyte = pdf_file.read()
     
-    st.success("🎉 تم إنشاء ملف PDF باللغة العربية والترويسات بنجاح!")
-    st.download_button(label="📥 اضغطي هنا لتحميل ملف PDF المنسق فوراً",
+    st.success("🎉 PDF Generated with Centered Text Successfully!")
+    st.download_button(label="📥 Click Here to Download PDF File",
                        data=PDFbyte,
                        file_name=f"Weekly_Plan_{grade}.pdf",
                        mime='application/octet-stream')
